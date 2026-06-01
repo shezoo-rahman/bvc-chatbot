@@ -32,8 +32,19 @@ An AI-powered stock insights assistant that lets users ask natural language ques
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys
+```
 
+Edit the `.env` file and add your API keys:
+
+```
+OPENAI_API_KEY=your-openai-api-key
+FINNHUB_API_KEY=your-finnhub-api-key
+OPENAI_MODEL=gpt-4o
+```
+
+You can get a free Finnhub API key at [finnhub.io](https://finnhub.io). Then start the app:
+
+```bash
 docker compose up
 ```
 
