@@ -4,87 +4,337 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Insights Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        :root {
+            --blue-50: #4589ff;
+            --blue-60: #0f62fe;
+            --blue-70: #0043ce;
+            --blue-80: #002d9c;
+            --blue-10: #edf5ff;
+            --grey-10: #f4f4f4;
+            --grey-20: #e0e0e0;
+            --grey-30: #c6c6c6;
+            --grey-50: #8d8d8d;
+            --grey-70: #525252;
+            --grey-80: #393939;
+            --grey-90: #262626;
+            --grey-100: #161616;
+            --white: #ffffff;
+            --red-50: #fa4d56;
+            --green-50: #24a148;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f5f5; height: 100vh; display: flex; flex-direction: column;
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--grey-10);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--grey-100);
         }
-        header {
-            background: #1a1a2e; color: white; padding: 16px 24px;
-            text-align: center;
+
+        /* Top bar */
+        .topbar {
+            padding: 12px 24px;
+            background: var(--white);
+            border-bottom: 1px solid var(--grey-20);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        header h1 { font-size: 1.4rem; }
-        header p { font-size: 0.85rem; opacity: 0.7; margin-top: 4px; }
+        .topbar .left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .topbar .brand-icon {
+            width: 30px;
+            height: 30px;
+            background: var(--blue-60);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.7rem;
+            color: var(--white);
+        }
+        .topbar h1 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--grey-100);
+        }
+        .topbar .model-tag {
+            font-size: 0.7rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--blue-60);
+            background: var(--blue-10);
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+
+        /* Chat */
         #chat-container {
-            flex: 1; overflow-y: auto; padding: 20px;
-            max-width: 800px; width: 100%; margin: 0 auto;
+            flex: 1;
+            overflow-y: auto;
+            padding: 28px 32px;
         }
-        .message {
-            margin-bottom: 16px; display: flex; gap: 12px;
+
+        .message { margin-bottom: 24px; }
+        .message.user { text-align: right; }
+
+        .message .meta {
+            font-size: 0.7rem;
+            color: var(--grey-50);
+            margin-bottom: 6px;
+            font-weight: 500;
         }
-        .message.user { justify-content: flex-end; }
+
         .message .bubble {
-            max-width: 75%; padding: 12px 16px; border-radius: 12px;
-            line-height: 1.5; font-size: 0.95rem;
+            font-size: 0.875rem;
+            line-height: 1.7;
         }
+
+        /* User */
         .message.user .bubble {
-            background: #1a1a2e; color: white;
-            border-bottom-right-radius: 4px;
+            display: inline-block;
+            text-align: left;
+            max-width: 65%;
+            background: var(--blue-60);
+            color: var(--white);
+            padding: 12px 18px;
+            border-radius: 12px 12px 4px 12px;
         }
+
+        /* Assistant */
         .message.assistant .bubble {
-            background: white; border: 1px solid #e0e0e0;
-            border-bottom-left-radius: 4px;
+            background: var(--white);
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--grey-20);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
-        .message.assistant .bubble p { margin-bottom: 8px; }
+        .message.assistant .bubble p { margin-bottom: 10px; }
         .message.assistant .bubble p:last-child { margin-bottom: 0; }
+        .message.assistant .bubble ul,
+        .message.assistant .bubble ol { margin: 8px 0; padding-left: 20px; }
+        .message.assistant .bubble li { margin-bottom: 4px; }
+
+        /* Tables rendered from markdown */
+        .message.assistant .bubble table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.825rem;
+        }
+        .message.assistant .bubble th {
+            text-align: left;
+            font-weight: 600;
+            color: var(--grey-70);
+            padding: 8px 12px;
+            border-bottom: 2px solid var(--grey-20);
+        }
+        .message.assistant .bubble td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--grey-10);
+            color: var(--grey-90);
+        }
+        .message.assistant .bubble tr:last-child td {
+            border-bottom: none;
+        }
+        .message.assistant .bubble tr:hover {
+            background: var(--grey-10);
+        }
+
+        /* Error */
         .message.error .bubble {
-            background: #fff0f0; border: 1px solid #ffcdd2; color: #c62828;
+            background: var(--white);
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid #ffd7d9;
+            color: var(--grey-90);
         }
+        .message.error .bubble::before {
+            content: "Error";
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--red-50);
+            margin-bottom: 6px;
+            letter-spacing: 0.05em;
+        }
+
+        /* Loading */
         #loading {
-            display: none; text-align: center; padding: 12px; color: #888;
+            display: none;
+            padding: 0 32px 24px;
         }
-        #loading .dots::after {
-            content: ''; animation: dots 1.5s steps(3) infinite;
+        #loading .typing {
+            background: var(--white);
+            border: 1px solid var(--grey-20);
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: var(--grey-50);
         }
-        @keyframes dots {
-            0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; }
+        #loading .dots { display: flex; gap: 4px; }
+        #loading .dots span {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: var(--blue-60);
+            animation: bounce 1.4s ease-in-out infinite;
         }
+        #loading .dots span:nth-child(2) { animation-delay: 0.15s; }
+        #loading .dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+            40% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        /* Suggestion chips */
+        #suggestions {
+            display: flex;
+            gap: 8px;
+            padding: 0 32px 8px;
+            flex-wrap: wrap;
+        }
+        #suggestions .chip {
+            padding: 8px 14px;
+            background: var(--white);
+            border: 1px solid var(--grey-20);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--grey-70);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        #suggestions .chip:hover {
+            border-color: var(--blue-60);
+            color: var(--blue-60);
+            background: var(--blue-10);
+        }
+
+        /* Input */
         #input-area {
-            border-top: 1px solid #e0e0e0; background: white; padding: 16px;
+            padding: 8px 32px 20px;
+            background: var(--grey-10);
         }
         #input-area form {
-            max-width: 800px; margin: 0 auto; display: flex; gap: 8px;
+            display: flex;
+            gap: 0;
+            background: var(--white);
+            border: 2px solid var(--grey-20);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: border-color 0.15s;
         }
+        #input-area form:focus-within { border-color: var(--blue-60); }
         #input-area input {
-            flex: 1; padding: 12px 16px; border: 1px solid #ddd;
-            border-radius: 8px; font-size: 1rem; outline: none;
+            flex: 1;
+            padding: 14px 18px;
+            border: none;
+            font-size: 0.875rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            outline: none;
+            background: transparent;
+            color: var(--grey-100);
         }
-        #input-area input:focus { border-color: #1a1a2e; }
+        #input-area input::placeholder { color: var(--grey-50); }
         #input-area button {
-            padding: 12px 24px; background: #1a1a2e; color: white;
-            border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;
+            padding: 14px 24px;
+            background: var(--blue-60);
+            color: var(--white);
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-weight: 500;
+            transition: background 0.15s;
         }
-        #input-area button:hover { background: #16213e; }
-        #input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #input-area button:hover { background: var(--blue-70); }
+        #input-area button:disabled {
+            background: var(--grey-50);
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            #chat-container { padding: 20px 16px; }
+            #suggestions { padding: 0 16px 8px; }
+            #input-area { padding: 8px 16px 16px; }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Stock Insights Assistant</h1>
-        <p>Ask me about stocks, companies, and market data</p>
-    </header>
+    <div class="topbar">
+        <div class="left">
+            <div class="brand-icon">SI</div>
+            <h1>Stock Insights Assistant</h1>
+        </div>
+    </div>
+
     <div id="chat-container">
         <div class="message assistant">
+            <div class="meta">Assistant</div>
             <div class="bubble">
-                <p>Hello! I can help you with stock information. Try asking:</p>
-                <p><strong>"How is AAPL doing today?"</strong></p>
-                <p><strong>"Compare TSLA and F"</strong></p>
+                <p>Hello! I can help you with real-time stock data. Try asking about a quote, comparing companies, or getting the latest news.</p>
+            </div>
+        </div>
+
+        <div class="message user">
+            <div class="meta">You</div>
+            <div class="bubble">How is AAPL doing today?</div>
+        </div>
+
+        <div class="message assistant" id="sample-quote">
+            <div class="meta">Assistant</div>
+            <div class="bubble"></div>
+        </div>
+
+        <div class="message user">
+            <div class="meta">You</div>
+            <div class="bubble">Compare TSLA and F</div>
+        </div>
+
+        <div class="message assistant" id="sample-compare">
+            <div class="meta">Assistant</div>
+            <div class="bubble"></div>
+        </div>
+
+        <div class="message user">
+            <div class="meta">You</div>
+            <div class="bubble">How is XYZFAKE doing?</div>
+        </div>
+
+        <div class="message error">
+            <div class="meta">Assistant</div>
+            <div class="bubble">
+                <p>No data found for symbol 'XYZFAKE'. Please check the ticker symbol and try again.</p>
             </div>
         </div>
     </div>
-    <div id="loading"><span>Analyzing</span><span class="dots"></span></div>
+
+    <div id="loading">
+        <div class="typing">
+            <div class="dots"><span></span><span></span><span></span></div>
+            Analyzing market data...
+        </div>
+    </div>
+
+    <div id="suggestions">
+        <div class="chip" onclick="submitQuery('How is AAPL doing today?')">How is AAPL doing today?</div>
+        <div class="chip" onclick="submitQuery('Compare TSLA and F')">Compare TSLA and F</div>
+        <div class="chip" onclick="submitQuery('Latest news on MSFT')">Latest news on MSFT</div>
+    </div>
+
     <div id="input-area">
         <form id="query-form">
             <input type="text" id="query-input"
@@ -94,15 +344,53 @@
     </div>
 
     <script>
+        // Render sample messages as markdown (simulating real LLM output)
+        const sampleQuote = `Apple (**AAPL**) is trading at **$178.50**, up **$2.30 (+1.31%)** today.
+
+| Metric | Value |
+|--------|-------|
+| Open | $176.80 |
+| High | $179.20 |
+| Low | $176.10 |
+| Prev Close | $176.20 |`;
+
+        const sampleCompare = `**Tesla (TSLA) vs Ford (F)**
+
+| Metric | TSLA | F |
+|--------|------|---|
+| Price | $248.50 | $12.30 |
+| Change | +2.1% | -0.5% |
+| Market Cap | $789B | $49B |
+| Industry | Auto Manufacturers | Auto Manufacturers |
+
+Tesla shows stronger momentum today but trades at a significant premium relative to Ford.`;
+
+        document.querySelector('#sample-quote .bubble').innerHTML = marked.parse(sampleQuote);
+        document.querySelector('#sample-compare .bubble').innerHTML = marked.parse(sampleCompare);
+
         const chatContainer = document.getElementById('chat-container');
         const form = document.getElementById('query-form');
         const input = document.getElementById('query-input');
         const loading = document.getElementById('loading');
+        const suggestions = document.getElementById('suggestions');
         const submitBtn = form.querySelector('button');
+
+        function hideSuggestions() {
+            suggestions.style.display = 'none';
+        }
+
+        function submitQuery(text) {
+            input.value = text;
+            form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
 
         function appendMessage(role, content) {
             const div = document.createElement('div');
             div.className = `message ${role}`;
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = role === 'user' ? 'You' : 'Assistant';
+            div.appendChild(meta);
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             if (role === 'user') {
@@ -120,6 +408,7 @@
             const question = input.value.trim();
             if (!question) return;
 
+            hideSuggestions();
             appendMessage('user', question);
             input.value = '';
             loading.style.display = 'block';
