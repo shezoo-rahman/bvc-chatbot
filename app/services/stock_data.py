@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import httpx
 
-from app.models.schemas import CompanyNews, CompanyProfile, StockQuote
+from app.models.schemas import CompanyNews, CompanyProfile, StockQuote, SymbolSearchResult
 
 
 class StockDataError(Exception):
@@ -106,9 +106,48 @@ class StockDataService:
             )
         return articles
 
+    async def search_symbol(self, query: str, max_results: int = 5) -> list[SymbolSearchResult]:
+        response = await self.http_client.get(
+            f"{self.BASE_URL}/search",
+            params={"q": query, "token": self.api_key},
+        )
+        self._check_rate_limit(response)
+        data = response.json()
+
+        results = []
+        for item in data.get("result", []):
+            symbol = item.get("symbol", "")
+            if item.get("type") != "Common Stock":
+                continue
+            # Keep US share classes (.A, .B) but skip all exchange suffixes
+            if "." in symbol:
+                suffix = symbol.split(".")[-1]
+                if suffix not in ("A", "B"):
+                    continue
+            results.append(
+                SymbolSearchResult(
+                    symbol=symbol,
+                    description=item.get("description", ""),
+                )
+            )
+            if len(results) >= max_results:
+                break
+        return results
+
+    @staticmethod
+    def format_search_results(results: list[SymbolSearchResult]) -> str:
+        if not results:
+            return json.dumps({"message": "No matching symbols found."})
+        return json.dumps([r.model_dump() for r in results], indent=2)
+
     def _check_rate_limit(self, response: httpx.Response) -> None:
         if response.status_code == 429:
             raise RateLimitError("Finnhub API rate limit exceeded. Please try again shortly.")
+        if response.status_code == 403:
+            raise StockDataError(
+                "This stock is not available on the free data plan. "
+                "Only US-listed stocks are supported."
+            )
         response.raise_for_status()
 
     @staticmethod

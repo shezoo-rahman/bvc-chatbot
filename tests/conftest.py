@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.models.schemas import CompanyNews, CompanyProfile, StockQuote
+from app.models.schemas import CompanyNews, CompanyProfile, StockQuote, SymbolSearchResult
 from app.services.ai_assistant import AIAssistant
 from app.services.stock_data import StockDataService
 
@@ -56,14 +56,23 @@ def mock_http_client():
 
 
 @pytest.fixture
-def mock_stock_service(sample_quote, sample_profile, sample_news):
+def sample_search_results():
+    return [
+        SymbolSearchResult(symbol="AAPL", description="Apple Inc"),
+    ]
+
+
+@pytest.fixture
+def mock_stock_service(sample_quote, sample_profile, sample_news, sample_search_results):
     service = AsyncMock(spec=StockDataService)
     service.get_quote = AsyncMock(return_value=sample_quote)
     service.get_company_profile = AsyncMock(return_value=sample_profile)
     service.get_company_news = AsyncMock(return_value=sample_news)
+    service.search_symbol = AsyncMock(return_value=sample_search_results)
     service.format_quote = StockDataService.format_quote
     service.format_profile = StockDataService.format_profile
     service.format_news = StockDataService.format_news
+    service.format_search_results = StockDataService.format_search_results
     return service
 
 

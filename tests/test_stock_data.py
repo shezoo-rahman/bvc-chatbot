@@ -125,6 +125,49 @@ async def test_get_company_news_empty(service):
 
 
 @pytest.mark.asyncio
+async def test_search_symbol_success(service):
+    service.http_client.get.return_value = make_response(
+        {
+            "count": 2,
+            "result": [
+                {"symbol": "AAPL", "description": "Apple Inc", "type": "Common Stock"},
+                {"symbol": "APLE", "description": "Apple Hospitality REIT", "type": "Common Stock"},
+            ],
+        }
+    )
+    results = await service.search_symbol("Apple")
+    assert len(results) == 2
+    assert results[0].symbol == "AAPL"
+    assert results[1].symbol == "APLE"
+
+
+@pytest.mark.asyncio
+async def test_search_symbol_no_results(service):
+    service.http_client.get.return_value = make_response({"count": 0, "result": []})
+    results = await service.search_symbol("XYZRANDOM123")
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_search_symbol_filters_international_keeps_share_classes(service):
+    service.http_client.get.return_value = make_response(
+        {
+            "count": 4,
+            "result": [
+                {"symbol": "BRK.A", "description": "Berkshire Hathaway", "type": "Common Stock"},
+                {"symbol": "BRK.B", "description": "Berkshire Hathaway", "type": "Common Stock"},
+                {"symbol": "AMC.TO", "description": "Arizona Metals", "type": "Common Stock"},
+                {"symbol": "AMC.F", "description": "Albemarle Corp", "type": "Common Stock"},
+            ],
+        }
+    )
+    results = await service.search_symbol("Berkshire")
+    assert len(results) == 2
+    assert results[0].symbol == "BRK.A"
+    assert results[1].symbol == "BRK.B"
+
+
+@pytest.mark.asyncio
 async def test_symbol_uppercased(service):
     service.http_client.get.return_value = make_response(
         {
