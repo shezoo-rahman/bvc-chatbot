@@ -32,12 +32,13 @@ An AI-powered stock insights assistant that lets users ask natural language ques
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-Edit the `.env` file and add your API keys:
+Replace the placeholder values with your real API keys, then save with `Ctrl+O` (Enter to confirm) and exit with `Ctrl+X`:
 
 ```
-OPENAI_API_KEY=your-openai-api-key
+OPENAI_API_KEY=sk-your-openai-api-key
 FINNHUB_API_KEY=your-finnhub-api-key
 OPENAI_MODEL=gpt-4o
 ```
