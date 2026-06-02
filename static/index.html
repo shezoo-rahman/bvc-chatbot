@@ -285,39 +285,7 @@
         <div class="message assistant">
             <div class="meta">Assistant</div>
             <div class="bubble">
-                <p>Hello! I can help you with real-time stock data. Try asking about a quote, comparing companies, or getting the latest news.</p>
-            </div>
-        </div>
-
-        <div class="message user">
-            <div class="meta">You</div>
-            <div class="bubble">How is AAPL doing today?</div>
-        </div>
-
-        <div class="message assistant" id="sample-quote">
-            <div class="meta">Assistant</div>
-            <div class="bubble"></div>
-        </div>
-
-        <div class="message user">
-            <div class="meta">You</div>
-            <div class="bubble">Compare TSLA and F</div>
-        </div>
-
-        <div class="message assistant" id="sample-compare">
-            <div class="meta">Assistant</div>
-            <div class="bubble"></div>
-        </div>
-
-        <div class="message user">
-            <div class="meta">You</div>
-            <div class="bubble">How is XYZFAKE doing?</div>
-        </div>
-
-        <div class="message error">
-            <div class="meta">Assistant</div>
-            <div class="bubble">
-                <p>No data found for symbol 'XYZFAKE'. Please check the ticker symbol and try again.</p>
+                <p>Hello! I can help you with real-time <strong>US stock</strong> data — quotes, company profiles, and news from the past year. For best results, use ticker symbols (e.g. AAPL, TSLA). Note: only current-day price data is available, no historical prices.</p>
             </div>
         </div>
     </div>
@@ -344,36 +312,13 @@
     </div>
 
     <script>
-        // Render sample messages as markdown (simulating real LLM output)
-        const sampleQuote = `Apple (**AAPL**) is trading at **$178.50**, up **$2.30 (+1.31%)** today.
-
-| Metric | Value |
-|--------|-------|
-| Open | $176.80 |
-| High | $179.20 |
-| Low | $176.10 |
-| Prev Close | $176.20 |`;
-
-        const sampleCompare = `**Tesla (TSLA) vs Ford (F)**
-
-| Metric | TSLA | F |
-|--------|------|---|
-| Price | $248.50 | $12.30 |
-| Change | +2.1% | -0.5% |
-| Market Cap | $789B | $49B |
-| Industry | Auto Manufacturers | Auto Manufacturers |
-
-Tesla shows stronger momentum today but trades at a significant premium relative to Ford.`;
-
-        document.querySelector('#sample-quote .bubble').innerHTML = marked.parse(sampleQuote);
-        document.querySelector('#sample-compare .bubble').innerHTML = marked.parse(sampleCompare);
-
         const chatContainer = document.getElementById('chat-container');
         const form = document.getElementById('query-form');
         const input = document.getElementById('query-input');
         const loading = document.getElementById('loading');
         const suggestions = document.getElementById('suggestions');
         const submitBtn = form.querySelector('button');
+        const sessionId = crypto.randomUUID();
 
         function hideSuggestions() {
             suggestions.style.display = 'none';
@@ -418,7 +363,7 @@ Tesla shows stronger momentum today but trades at a significant premium relative
                 const res = await fetch('/api/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question })
+                    body: JSON.stringify({ question, session_id: sessionId })
                 });
                 const data = await res.json();
                 if (res.ok) {

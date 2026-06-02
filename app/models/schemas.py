@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=1000)
+    session_id: str = ""
 
 
 class QueryResponse(BaseModel):
@@ -39,3 +40,8 @@ class CompanyNews(BaseModel):
     source: str
     url: str
     datetime: int
+
+
+class SymbolSearchResult(BaseModel):
+    symbol: str
+    description: str
