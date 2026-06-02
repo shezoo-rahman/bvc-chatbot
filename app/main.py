@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,6 +28,8 @@ async def lifespan(app: FastAPI):
     app.state.http_client = http_client
     app.state.stock_service = stock_service
     app.state.assistant = assistant
+
+    logging.getLogger(__name__).info("Stock Insights Assistant ready at http://localhost:8000")
 
     yield
 
