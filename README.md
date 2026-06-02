@@ -31,6 +31,8 @@ An AI-powered stock insights assistant that lets users ask natural language ques
 ### Setup
 
 ```bash
+git clone https://github.com/shezoo-rahman/bvc-chatbot.git
+cd bvc-chatbot
 cp .env.example .env
 nano .env
 ```
