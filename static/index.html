@@ -318,9 +318,9 @@
         const loading = document.getElementById('loading');
         const suggestions = document.getElementById('suggestions');
         const submitBtn = form.querySelector('button');
-        const sessionId = (crypto.randomUUID || function() {
-            return 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
-        })();
+        const sessionId = typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : 'xxxx-xxxx-xxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
 
         function hideSuggestions() {
             suggestions.style.display = 'none';
