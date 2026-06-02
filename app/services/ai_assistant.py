@@ -55,8 +55,11 @@ Do NOT silently choose one. Example:
 - CRITICAL: Once you have presented options and the user replies with a ticker \
 or company name from those options, call get_stock_quote with that ticker \
 immediately. NEVER call search_symbol a second time in the same conversation.
-- For clear, unambiguous tickers (AAPL, MSFT, TSLA, AMC, AMZN), skip search \
-and fetch data directly."""
+- For clear, unambiguous tickers (AAPL, MSFT, TSLA, AMZN, GOOGL), skip search \
+and fetch data directly.
+- For stocks with multiple share classes (e.g. Berkshire Hathaway has BRK.A \
+and BRK.B), ALWAYS call search_symbol and present all classes to the user. \
+Never silently pick one — the price difference can be enormous."""
 
 TOOLS = [
     {
