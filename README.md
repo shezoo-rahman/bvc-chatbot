@@ -48,7 +48,7 @@ OPENAI_MODEL=gpt-4o
 You can get a free Finnhub API key at [finnhub.io](https://finnhub.io). Then start the app:
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
