@@ -1,6 +1,6 @@
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -50,7 +50,9 @@ app.include_router(router)
 
 
 @app.middleware("http")
-async def log_requests(request: Request, call_next) -> Response:
+async def log_requests(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     start: float = time.perf_counter()
     response: Response = await call_next(request)
     elapsed_ms: float = (time.perf_counter() - start) * 1000

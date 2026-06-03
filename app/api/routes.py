@@ -16,5 +16,5 @@ async def query(request: Request, body: QueryRequest) -> QueryResponse:
     try:
         answer: str = await assistant.answer_query(body.question, session_id=body.session_id)
         return QueryResponse(answer=answer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process query: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to process query")

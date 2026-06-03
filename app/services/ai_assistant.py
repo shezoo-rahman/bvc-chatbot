@@ -111,11 +111,6 @@ class AIAssistant:
         self._sessions[session_id].append({"role": "user", "content": question})
         self._sessions[session_id].append({"role": "assistant", "content": answer})
 
-    @staticmethod
-    async def _call_and_format(coro: Any, formatter: Any) -> str:
-        result = await coro
-        return formatter(result)
-
     async def _execute_tool(self, tool_call: ChatCompletionMessageToolCall) -> str:
         name: str = tool_call.function.name
         try:
@@ -124,31 +119,22 @@ class AIAssistant:
             logger.warning("Invalid JSON arguments for tool %s", name)
             return json.dumps({"error": "Invalid tool arguments"})
 
-        tool_dispatch: dict[str, Any] = {
-            "search_symbol": lambda a: self._call_and_format(
-                self.stock_service.search_symbol(a["query"]),
-                StockDataService.format_search_results,
-            ),
-            "get_stock_quote": lambda a: self._call_and_format(
-                self.stock_service.get_quote(a["symbol"]),
-                StockDataService.format_quote,
-            ),
-            "get_company_profile": lambda a: self._call_and_format(
-                self.stock_service.get_company_profile(a["symbol"]),
-                StockDataService.format_profile,
-            ),
-            "get_company_news": lambda a: self._call_and_format(
-                self.stock_service.get_company_news(a["symbol"]),
-                StockDataService.format_news,
-            ),
-        }
-
         start: float = time.perf_counter()
         try:
-            handler = tool_dispatch.get(name)
-            if not handler:
+            if name == "search_symbol":
+                result = await self.stock_service.search_symbol(args["query"])
+                return StockDataService.format_search_results(result)
+            elif name == "get_stock_quote":
+                result = await self.stock_service.get_quote(args["symbol"])
+                return StockDataService.format_quote(result)
+            elif name == "get_company_profile":
+                result = await self.stock_service.get_company_profile(args["symbol"])
+                return StockDataService.format_profile(result)
+            elif name == "get_company_news":
+                result = await self.stock_service.get_company_news(args["symbol"])
+                return StockDataService.format_news(result)
+            else:
                 return json.dumps({"error": f"Unknown tool: {name}"})
-            return await handler(args)
         except SymbolNotFoundError as e:
             logger.info("Symbol not found: %s", e)
             return json.dumps({"error": str(e)})
