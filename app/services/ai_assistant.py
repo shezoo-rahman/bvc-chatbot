@@ -23,6 +23,12 @@ MAX_HISTORY_MESSAGES: int = 20
 
 
 class AIAssistant:
+    """Orchestrates OpenAI function calling with Finnhub stock data tools.
+
+    Manages multi-turn conversations per session and validates LLM responses
+    against tool results to prevent hallucinated financial data.
+    """
+
     def __init__(
         self, openai_client: AsyncOpenAI, stock_service: StockDataService, model: str
     ) -> None:

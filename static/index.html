@@ -6,6 +6,7 @@
     <title>Stock Insights Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         :root {
             --blue-50: #4589ff;
@@ -343,7 +344,7 @@
             if (role === 'user') {
                 bubble.textContent = content;
             } else {
-                bubble.innerHTML = marked.parse(content);
+                bubble.innerHTML = DOMPurify.sanitize(marked.parse(content));
             }
             div.appendChild(bubble);
             chatContainer.appendChild(div);
