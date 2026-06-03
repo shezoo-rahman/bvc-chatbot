@@ -1,8 +1,10 @@
 import asyncio
 import json
 import logging
+from typing import Any
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageToolCall
 
 from app.services.stock_data import (
     RateLimitError,
@@ -12,7 +14,7 @@ from app.services.stock_data import (
 )
 from app.services.validation import validate_response
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 You are a helpful stock market analyst assistant. You provide clear, \
@@ -66,7 +68,7 @@ and fetch data directly.
 and BRK.B), ALWAYS call search_symbol and present all classes to the user. \
 Never silently pick one — the price difference can be enormous."""
 
-TOOLS = [
+TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
@@ -150,21 +152,23 @@ TOOLS = [
     },
 ]
 
-MAX_ITERATIONS = 5
-MAX_HISTORY_MESSAGES = 20
+MAX_ITERATIONS: int = 5
+MAX_HISTORY_MESSAGES: int = 20
 
 
 class AIAssistant:
-    def __init__(self, openai_client: AsyncOpenAI, stock_service: StockDataService, model: str):
-        self.client = openai_client
-        self.stock_service = stock_service
-        self.model = model
-        self._sessions: dict[str, list[dict]] = {}
+    def __init__(
+        self, openai_client: AsyncOpenAI, stock_service: StockDataService, model: str
+    ) -> None:
+        self.client: AsyncOpenAI = openai_client
+        self.stock_service: StockDataService = stock_service
+        self.model: str = model
+        self._sessions: dict[str, list[dict[str, str]]] = {}
 
     async def answer_query(self, question: str, session_id: str = "") -> str:
-        history = self._sessions.get(session_id, []) if session_id else []
+        history: list[dict[str, str]] = self._sessions.get(session_id, []) if session_id else []
 
-        messages = [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT},
             *history[-MAX_HISTORY_MESSAGES:],
             {"role": "user", "content": question},
@@ -181,18 +185,18 @@ class AIAssistant:
             message = response.choices[0].message
 
             if not message.tool_calls:
-                final_text = message.content or "I wasn't able to generate a response."
+                final_text: str = message.content or "I wasn't able to generate a response."
                 validated_text, _ = validate_response(final_text, tool_results)
                 self._save_turn(session_id, question, validated_text)
                 return validated_text
 
             messages.append(message)
 
-            tasks = []
-            for tool_call in message.tool_calls:
-                tasks.append(self._execute_tool(tool_call))
+            tasks: list[asyncio.Task[str]] = [
+                self._execute_tool(tool_call) for tool_call in message.tool_calls
+            ]
 
-            results = await asyncio.gather(*tasks)
+            results: list[str] = await asyncio.gather(*tasks)
 
             for tool_call, result in zip(message.tool_calls, results):
                 tool_results.append(result)
@@ -204,7 +208,7 @@ class AIAssistant:
                     }
                 )
 
-        fallback = (
+        fallback: str = (
             "I gathered some data but couldn't complete the analysis. "
             "Please try a simpler question."
         )
@@ -219,10 +223,10 @@ class AIAssistant:
         self._sessions[session_id].append({"role": "user", "content": question})
         self._sessions[session_id].append({"role": "assistant", "content": answer})
 
-    async def _execute_tool(self, tool_call) -> str:
-        name = tool_call.function.name
+    async def _execute_tool(self, tool_call: ChatCompletionMessageToolCall) -> str:
+        name: str = tool_call.function.name
         try:
-            args = json.loads(tool_call.function.arguments)
+            args: dict[str, Any] = json.loads(tool_call.function.arguments)
         except json.JSONDecodeError:
             return json.dumps({"error": "Invalid tool arguments"})
 
