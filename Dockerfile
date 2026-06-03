@@ -8,6 +8,9 @@ COPY static/ static/
 
 RUN pip install --no-cache-dir .
 
+RUN useradd -r -s /bin/false appuser
+USER appuser
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

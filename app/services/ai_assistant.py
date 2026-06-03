@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 import time
-from collections import OrderedDict
-from typing import Any
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageToolCall
@@ -17,11 +15,9 @@ from app.services.stock_data import (
 )
 from app.services.validation import validate_response
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-MAX_ITERATIONS: int = 5
-MAX_HISTORY_MESSAGES: int = 20
-MAX_SESSIONS: int = 200
+MAX_ITERATIONS = 5
 
 
 class AIAssistant:
@@ -34,23 +30,23 @@ class AIAssistant:
     def __init__(
         self, openai_client: AsyncOpenAI, stock_service: StockDataService, model: str
     ) -> None:
-        self.client: AsyncOpenAI = openai_client
-        self.stock_service: StockDataService = stock_service
-        self.model: str = model
-        self._sessions: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
+        self.client = openai_client
+        self.stock_service = stock_service
+        self.model = model
+        self._sessions: dict[str, list[dict[str, str]]] = {}
 
     async def answer_query(self, question: str, session_id: str = "") -> str:
         logger.info("Query received: %s (session=%s)", question[:80], session_id[:8] or "none")
         start = time.perf_counter()
 
-        history: list[dict[str, str]] = self._sessions.get(session_id, []) if session_id else []
+        history = self._sessions.get(session_id, []) if session_id else []
 
-        messages: list[dict[str, Any]] = [
+        messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            *history[-MAX_HISTORY_MESSAGES:],
+            *history[-20:],
             {"role": "user", "content": question},
         ]
-        tool_results: list[str] = []
+        tool_results = []
 
         for iteration in range(MAX_ITERATIONS):
             response = await self.client.chat.completions.create(
@@ -62,7 +58,7 @@ class AIAssistant:
             message = response.choices[0].message
 
             if not message.tool_calls:
-                final_text: str = message.content or "I wasn't able to generate a response."
+                final_text = message.content or "I wasn't able to generate a response."
                 validated_text, was_valid = validate_response(final_text, tool_results)
                 if not was_valid:
                     logger.warning("Validation flagged ungrounded numbers in response")
@@ -72,14 +68,10 @@ class AIAssistant:
                 return validated_text
 
             messages.append(message)
-            tool_names: list[str] = [tc.function.name for tc in message.tool_calls]
+            tool_names = [tc.function.name for tc in message.tool_calls]
             logger.info("Tool calls requested: %s", ", ".join(tool_names))
 
-            tasks: list[asyncio.Task[str]] = [
-                self._execute_tool(tool_call) for tool_call in message.tool_calls
-            ]
-
-            results: list[str] = await asyncio.gather(*tasks)
+            results = await asyncio.gather(*[self._execute_tool(tc) for tc in message.tool_calls])
 
             for tool_call, result in zip(message.tool_calls, results):
                 tool_results.append(result)
@@ -92,7 +84,7 @@ class AIAssistant:
                 )
 
         logger.warning("Max iterations reached for query: %s", question[:80])
-        fallback: str = (
+        fallback = (
             "I gathered some data but couldn't complete the analysis. "
             "Please try a simpler question."
         )
@@ -103,38 +95,25 @@ class AIAssistant:
         if not session_id:
             return
         if session_id not in self._sessions:
-            if len(self._sessions) >= MAX_SESSIONS:
-                self._sessions.popitem(last=False)
+            if len(self._sessions) >= 200:
+                oldest = next(iter(self._sessions))
+                del self._sessions[oldest]
             self._sessions[session_id] = []
-        else:
-            self._sessions.move_to_end(session_id)
         self._sessions[session_id].append({"role": "user", "content": question})
         self._sessions[session_id].append({"role": "assistant", "content": answer})
 
     async def _execute_tool(self, tool_call: ChatCompletionMessageToolCall) -> str:
-        name: str = tool_call.function.name
+        name = tool_call.function.name
         try:
-            args: dict[str, Any] = json.loads(tool_call.function.arguments)
+            args = json.loads(tool_call.function.arguments)
         except json.JSONDecodeError:
             logger.warning("Invalid JSON arguments for tool %s", name)
             return json.dumps({"error": "Invalid tool arguments"})
 
-        start: float = time.perf_counter()
+        start = time.perf_counter()
         try:
-            if name == "search_symbol":
-                result = await self.stock_service.search_symbol(args["query"])
-                return StockDataService.format_search_results(result)
-            elif name == "get_stock_quote":
-                result = await self.stock_service.get_quote(args["symbol"])
-                return StockDataService.format_quote(result)
-            elif name == "get_company_profile":
-                result = await self.stock_service.get_company_profile(args["symbol"])
-                return StockDataService.format_profile(result)
-            elif name == "get_company_news":
-                result = await self.stock_service.get_company_news(args["symbol"])
-                return StockDataService.format_news(result)
-            else:
-                return json.dumps({"error": f"Unknown tool: {name}"})
+            result = await self._dispatch_tool(name, args)
+            return result
         except SymbolNotFoundError as e:
             logger.info("Symbol not found: %s", e)
             return json.dumps({"error": str(e)})
@@ -148,5 +127,23 @@ class AIAssistant:
             logger.exception("Unexpected error executing tool %s", name)
             return json.dumps({"error": f"An unexpected error occurred: {e}"})
         finally:
-            elapsed_ms: float = (time.perf_counter() - start) * 1000
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.info("Tool %s(%s) completed in %.0fms", name, args, elapsed_ms)
+
+    async def _dispatch_tool(self, name: str, args: dict) -> str:
+        if name == "search_symbol":
+            results = await self.stock_service.search_symbol(args["query"])
+            if not results:
+                return json.dumps({"message": "No matching symbols found."})
+            return json.dumps([r.model_dump() for r in results], indent=2)
+        elif name == "get_stock_quote":
+            quote = await self.stock_service.get_quote(args["symbol"])
+            return quote.model_dump_json(indent=2)
+        elif name == "get_company_profile":
+            profile = await self.stock_service.get_company_profile(args["symbol"])
+            return profile.model_dump_json(indent=2)
+        elif name == "get_company_news":
+            news = await self.stock_service.get_company_news(args["symbol"])
+            return json.dumps([n.model_dump() for n in news], indent=2)
+        else:
+            return json.dumps({"error": f"Unknown tool: {name}"})

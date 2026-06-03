@@ -178,50 +178,6 @@ async def test_no_history_without_session_id(assistant, mock_openai_client):
 
 
 @pytest.mark.asyncio
-async def test_session_eviction_when_full(assistant, mock_openai_client):
-    """Oldest session is evicted when MAX_SESSIONS is reached."""
-    from app.services.ai_assistant import MAX_SESSIONS
-
-    mock_openai_client.chat.completions.create = AsyncMock(
-        return_value=make_text_response("Response.")
-    )
-
-    # Fill to capacity
-    for i in range(MAX_SESSIONS):
-        await assistant.answer_query("question", session_id=f"sess-{i}")
-
-    assert len(assistant._sessions) == MAX_SESSIONS
-    assert "sess-0" in assistant._sessions
-
-    # One more should evict the oldest (sess-0)
-    await assistant.answer_query("question", session_id="sess-new")
-    assert len(assistant._sessions) == MAX_SESSIONS
-    assert "sess-0" not in assistant._sessions
-    assert "sess-new" in assistant._sessions
-
-
-@pytest.mark.asyncio
-async def test_active_session_not_evicted(assistant, mock_openai_client):
-    """A session that receives a new message is moved to the end and not evicted."""
-    from app.services.ai_assistant import MAX_SESSIONS
-
-    mock_openai_client.chat.completions.create = AsyncMock(
-        return_value=make_text_response("Response.")
-    )
-
-    for i in range(MAX_SESSIONS):
-        await assistant.answer_query("question", session_id=f"sess-{i}")
-
-    # Touch the oldest session so it becomes the most recent
-    await assistant.answer_query("follow-up", session_id="sess-0")
-
-    # Add a new session — sess-1 (now oldest) should be evicted, not sess-0
-    await assistant.answer_query("question", session_id="sess-new")
-    assert "sess-0" in assistant._sessions
-    assert "sess-1" not in assistant._sessions
-
-
-@pytest.mark.asyncio
 async def test_malformed_tool_arguments(assistant, mock_openai_client):
     """Malformed JSON from the LLM is handled gracefully."""
     mock_tc = MagicMock()

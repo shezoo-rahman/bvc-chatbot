@@ -11,4 +11,4 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-docs/
+docs/ai-data-engineer-home-task.md

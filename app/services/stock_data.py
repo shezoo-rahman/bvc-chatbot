@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timedelta
 
 import httpx
@@ -29,17 +28,17 @@ class StockDataService:
     BASE_URL = "https://finnhub.io/api/v1"
 
     def __init__(self, api_key: str, http_client: httpx.AsyncClient) -> None:
-        self.api_key: str = api_key
-        self.http_client: httpx.AsyncClient = http_client
+        self.api_key = api_key
+        self.http_client = http_client
 
     async def get_quote(self, symbol: str) -> StockQuote:
         symbol = symbol.upper().strip()
-        response: httpx.Response = await self.http_client.get(
+        response = await self.http_client.get(
             f"{self.BASE_URL}/quote",
             params={"symbol": symbol, "token": self.api_key},
         )
         self._check_rate_limit(response)
-        data: dict = response.json()
+        data = response.json()
 
         if data.get("c", 0) == 0 and data.get("h", 0) == 0:
             raise SymbolNotFoundError(f"No data found for symbol '{symbol}'")
@@ -57,12 +56,12 @@ class StockDataService:
 
     async def get_company_profile(self, symbol: str) -> CompanyProfile:
         symbol = symbol.upper().strip()
-        response: httpx.Response = await self.http_client.get(
+        response = await self.http_client.get(
             f"{self.BASE_URL}/stock/profile2",
             params={"symbol": symbol, "token": self.api_key},
         )
         self._check_rate_limit(response)
-        data: dict = response.json()
+        data = response.json()
 
         if not data or not data.get("name"):
             raise SymbolNotFoundError(f"No profile found for symbol '{symbol}'")
@@ -82,10 +81,10 @@ class StockDataService:
 
     async def get_company_news(self, symbol: str, max_articles: int = 5) -> list[CompanyNews]:
         symbol = symbol.upper().strip()
-        today: str = datetime.now().strftime("%Y-%m-%d")
-        week_ago: str = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        today = datetime.now().strftime("%Y-%m-%d")
+        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 
-        response: httpx.Response = await self.http_client.get(
+        response = await self.http_client.get(
             f"{self.BASE_URL}/company-news",
             params={
                 "symbol": symbol,
@@ -100,7 +99,7 @@ class StockDataService:
         if not isinstance(data, list):
             return []
 
-        articles: list[CompanyNews] = []
+        articles = []
         for item in data[:max_articles]:
             articles.append(
                 CompanyNews(
@@ -114,16 +113,16 @@ class StockDataService:
         return articles
 
     async def search_symbol(self, query: str, max_results: int = 5) -> list[SymbolSearchResult]:
-        response: httpx.Response = await self.http_client.get(
+        response = await self.http_client.get(
             f"{self.BASE_URL}/search",
             params={"q": query, "token": self.api_key},
         )
         self._check_rate_limit(response)
-        data: dict = response.json()
+        data = response.json()
 
-        results: list[SymbolSearchResult] = []
+        results = []
         for item in data.get("result", []):
-            symbol: str = item.get("symbol", "")
+            symbol = item.get("symbol", "")
             if item.get("type") != "Common Stock":
                 continue
             # Keep US share classes (.A, .B) but skip all exchange suffixes
@@ -141,12 +140,6 @@ class StockDataService:
                 break
         return results
 
-    @staticmethod
-    def format_search_results(results: list[SymbolSearchResult]) -> str:
-        if not results:
-            return json.dumps({"message": "No matching symbols found."})
-        return json.dumps([r.model_dump() for r in results], indent=2)
-
     def _check_rate_limit(self, response: httpx.Response) -> None:
         if response.status_code == 429:
             raise RateLimitError("Finnhub API rate limit exceeded. Please try again shortly.")
@@ -156,15 +149,3 @@ class StockDataService:
                 "Only US-listed stocks are supported."
             )
         response.raise_for_status()
-
-    @staticmethod
-    def format_quote(quote: StockQuote) -> str:
-        return json.dumps(quote.model_dump(), indent=2)
-
-    @staticmethod
-    def format_profile(profile: CompanyProfile) -> str:
-        return json.dumps(profile.model_dump(), indent=2)
-
-    @staticmethod
-    def format_news(news: list[CompanyNews]) -> str:
-        return json.dumps([n.model_dump() for n in news], indent=2)

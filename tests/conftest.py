@@ -69,10 +69,6 @@ def mock_stock_service(sample_quote, sample_profile, sample_news, sample_search_
     service.get_company_profile = AsyncMock(return_value=sample_profile)
     service.get_company_news = AsyncMock(return_value=sample_news)
     service.search_symbol = AsyncMock(return_value=sample_search_results)
-    service.format_quote = StockDataService.format_quote
-    service.format_profile = StockDataService.format_profile
-    service.format_news = StockDataService.format_news
-    service.format_search_results = StockDataService.format_search_results
     return service
 
 

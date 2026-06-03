@@ -20,7 +20,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger: logging.Logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -53,9 +53,9 @@ app.include_router(router)
 async def log_requests(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
-    start: float = time.perf_counter()
-    response: Response = await call_next(request)
-    elapsed_ms: float = (time.perf_counter() - start) * 1000
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
     if request.url.path.startswith("/api"):
         logger.info(
             "%s %s %d %.0fms",
@@ -67,7 +67,7 @@ async def log_requests(
     return response
 
 
-static_dir: Path = Path(__file__).parent.parent / "static"
+static_dir = Path(__file__).parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
