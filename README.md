@@ -43,7 +43,7 @@ An AI-powered stock insights assistant that lets users ask natural language ques
 
 - Docker and Docker Compose
 - OpenAI API key
-- Finnhub API key (free at [finnhub.io](https://finnhub.io))
+- Finnhub API key — free at [finnhub.io](https://finnhub.io) (sign up, key is on your dashboard)
 
 ### Setup
 
@@ -62,7 +62,7 @@ FINNHUB_API_KEY=your-finnhub-api-key
 OPENAI_MODEL=gpt-4o
 ```
 
-You can get a free Finnhub API key at [finnhub.io](https://finnhub.io). Then start the app:
+Then start the app:
 
 ```bash
 docker compose up --build
@@ -70,7 +70,7 @@ docker compose up --build
 
 Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-### Local Development
+### Running Tests Locally
 
 ```bash
 pip install ".[dev]"
