@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import time
+from collections import OrderedDict
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -20,6 +21,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 MAX_ITERATIONS: int = 5
 MAX_HISTORY_MESSAGES: int = 20
+MAX_SESSIONS: int = 200
 
 
 class AIAssistant:
@@ -35,7 +37,7 @@ class AIAssistant:
         self.client: AsyncOpenAI = openai_client
         self.stock_service: StockDataService = stock_service
         self.model: str = model
-        self._sessions: dict[str, list[dict[str, str]]] = {}
+        self._sessions: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
 
     async def answer_query(self, question: str, session_id: str = "") -> str:
         logger.info("Query received: %s (session=%s)", question[:80], session_id[:8] or "none")
@@ -101,9 +103,18 @@ class AIAssistant:
         if not session_id:
             return
         if session_id not in self._sessions:
+            if len(self._sessions) >= MAX_SESSIONS:
+                self._sessions.popitem(last=False)
             self._sessions[session_id] = []
+        else:
+            self._sessions.move_to_end(session_id)
         self._sessions[session_id].append({"role": "user", "content": question})
         self._sessions[session_id].append({"role": "assistant", "content": answer})
+
+    @staticmethod
+    async def _call_and_format(coro: Any, formatter: Any) -> str:
+        result = await coro
+        return formatter(result)
 
     async def _execute_tool(self, tool_call: ChatCompletionMessageToolCall) -> str:
         name: str = tool_call.function.name
@@ -113,22 +124,31 @@ class AIAssistant:
             logger.warning("Invalid JSON arguments for tool %s", name)
             return json.dumps({"error": "Invalid tool arguments"})
 
+        tool_dispatch: dict[str, Any] = {
+            "search_symbol": lambda a: self._call_and_format(
+                self.stock_service.search_symbol(a["query"]),
+                StockDataService.format_search_results,
+            ),
+            "get_stock_quote": lambda a: self._call_and_format(
+                self.stock_service.get_quote(a["symbol"]),
+                StockDataService.format_quote,
+            ),
+            "get_company_profile": lambda a: self._call_and_format(
+                self.stock_service.get_company_profile(a["symbol"]),
+                StockDataService.format_profile,
+            ),
+            "get_company_news": lambda a: self._call_and_format(
+                self.stock_service.get_company_news(a["symbol"]),
+                StockDataService.format_news,
+            ),
+        }
+
         start: float = time.perf_counter()
         try:
-            if name == "search_symbol":
-                results = await self.stock_service.search_symbol(args["query"])
-                return StockDataService.format_search_results(results)
-            elif name == "get_stock_quote":
-                quote = await self.stock_service.get_quote(args["symbol"])
-                return StockDataService.format_quote(quote)
-            elif name == "get_company_profile":
-                profile = await self.stock_service.get_company_profile(args["symbol"])
-                return StockDataService.format_profile(profile)
-            elif name == "get_company_news":
-                news = await self.stock_service.get_company_news(args["symbol"])
-                return StockDataService.format_news(news)
-            else:
+            handler = tool_dispatch.get(name)
+            if not handler:
                 return json.dumps({"error": f"Unknown tool: {name}"})
+            return await handler(args)
         except SymbolNotFoundError as e:
             logger.info("Symbol not found: %s", e)
             return json.dumps({"error": str(e)})
