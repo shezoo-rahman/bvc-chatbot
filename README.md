@@ -99,7 +99,7 @@ ruff check .
 - **Response caching** — Cache Finnhub responses (short TTL) to reduce API calls for repeated queries
 - **Rate limiting** — Per-user rate limiting to prevent abuse in a shared deployment
 - **Richer data** — Add historical price charts, earnings data, and sector comparisons (would require a paid data tier)
-- **Observability** — Structured logging and request tracing to monitor LLM tool usage and response quality
+- **Observability** — Distributed tracing (e.g. OpenTelemetry) to correlate requests across LLM and Finnhub calls
 
 ## AI Tools Used
 
