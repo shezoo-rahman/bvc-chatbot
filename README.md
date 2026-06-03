@@ -25,7 +25,7 @@ An AI-powered stock insights assistant that lets users ask natural language ques
 - **Backend**: FastAPI with async lifespan context manager
 - **AI**: OpenAI function calling with 4 tools (quote, profile, news, symbol search)
 - **Data**: Finnhub API for real-time US stock quotes, company profiles, and news
-- **Anti-hallucination**: Two-layer defense — system prompt constraints + post-response numeric validation
+- **Anti-hallucination**: System prompt constraints prevent the model from inventing data, with a post-response check that flags any numbers not grounded in tool results
 
 ### Query Flow
 

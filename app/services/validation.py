@@ -54,10 +54,7 @@ def validate_response(response_text: str, tool_results: list[str]) -> tuple[str,
         if not grounded:
             ungrounded.add(num)
 
-    # Allow small integers (years, counts, etc.) and very common numbers
-    significant_ungrounded = {n for n in ungrounded if n > 10}
-
-    if significant_ungrounded:
+    if ungrounded:
         return (
             response_text + "\n\n_Note: Some data may not reflect the latest values._",
             False,
