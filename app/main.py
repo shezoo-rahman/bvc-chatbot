@@ -4,7 +4,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 
@@ -44,5 +44,5 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 @app.get("/")
-async def root():
+async def root() -> Response:
     return FileResponse(str(static_dir / "index.html"))
