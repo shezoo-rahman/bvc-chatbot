@@ -19,6 +19,13 @@ class RateLimitError(StockDataError):
 
 
 class StockDataService:
+    """Async client for the Finnhub API.
+
+    Provides stock quotes, company profiles, news, and symbol search.
+    Raises SymbolNotFoundError or RateLimitError on expected failures
+    so the AI assistant can relay errors to the user naturally.
+    """
+
     BASE_URL = "https://finnhub.io/api/v1"
 
     def __init__(self, api_key: str, http_client: httpx.AsyncClient) -> None:
