@@ -78,6 +78,7 @@ source .venv/bin/activate
 pip install ".[dev]"
 pytest -v
 ruff check .
+ruff format --check .
 deactivate  # exit the virtual environment
 ```
 
