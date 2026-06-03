@@ -37,7 +37,7 @@ class StockDataService:
             f"{self.BASE_URL}/quote",
             params={"symbol": symbol, "token": self.api_key},
         )
-        self._check_rate_limit(response)
+        self._check_response(response)
         data = response.json()
 
         if data.get("c", 0) == 0 and data.get("h", 0) == 0:
@@ -60,7 +60,7 @@ class StockDataService:
             f"{self.BASE_URL}/stock/profile2",
             params={"symbol": symbol, "token": self.api_key},
         )
-        self._check_rate_limit(response)
+        self._check_response(response)
         data = response.json()
 
         if not data or not data.get("name"):
@@ -79,21 +79,21 @@ class StockDataService:
             web_url=data.get("weburl", ""),
         )
 
-    async def get_company_news(self, symbol: str, max_articles: int = 5) -> list[CompanyNews]:
+    async def get_company_news(self, symbol: str, max_articles: int = 10) -> list[CompanyNews]:
         symbol = symbol.upper().strip()
         today = datetime.now().strftime("%Y-%m-%d")
-        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        one_year_ago = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
 
         response = await self.http_client.get(
             f"{self.BASE_URL}/company-news",
             params={
                 "symbol": symbol,
-                "from": week_ago,
+                "from": one_year_ago,
                 "to": today,
                 "token": self.api_key,
             },
         )
-        self._check_rate_limit(response)
+        self._check_response(response)
         data = response.json()
 
         if not isinstance(data, list):
@@ -117,7 +117,7 @@ class StockDataService:
             f"{self.BASE_URL}/search",
             params={"q": query, "token": self.api_key},
         )
-        self._check_rate_limit(response)
+        self._check_response(response)
         data = response.json()
 
         results = []
@@ -140,7 +140,7 @@ class StockDataService:
                 break
         return results
 
-    def _check_rate_limit(self, response: httpx.Response) -> None:
+    def _check_response(self, response: httpx.Response) -> None:
         if response.status_code == 429:
             raise RateLimitError("Finnhub API rate limit exceeded. Please try again shortly.")
         if response.status_code == 403:
@@ -148,4 +148,7 @@ class StockDataService:
                 "This stock is not available on the free data plan. "
                 "Only US-listed stocks are supported."
             )
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise StockDataError(f"Finnhub API error (HTTP {e.response.status_code})") from e

@@ -73,9 +73,12 @@ Open [http://localhost:8000](http://localhost:8000) in your browser.
 ### Running Tests Locally
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install ".[dev]"
 pytest -v
 ruff check .
+deactivate  # exit the virtual environment
 ```
 
 ## Design Decisions & Trade-offs
@@ -110,5 +113,7 @@ This project was built with **Claude Code** (Anthropic's CLI agent). Here's how 
 - **Prompt engineering** — Iterated on the system prompt across multiple rounds of testing to handle edge cases (disambiguation, off-topic rejection, international stocks, hallucination prevention)
 - **Debugging** — Diagnosed issues like Finnhub's 403 responses for non-US stocks, international ticker filtering (`.TO`, `.F` suffixes vs `.A`, `.B` share classes), and conversation history loss causing search loops
 - **Code review** — Caught the Dockerfile build order issue (package install before source copy) and `crypto.randomUUID` browser compatibility problem
+
+Several AI suggestions were rejected or simplified — for example, Claude proposed a decorator-based tool registry with auto-discovery for dispatching function calls, but I kept a plain if/elif in `_dispatch_tool` since there are only 4 tools and a registry adds complexity without benefit at this scale. Similarly, I chose in-memory session storage over a suggested Redis integration to avoid adding infrastructure for a demo app.
 
 All code was reviewed, tested, and refined through an iterative process — Claude proposed, I evaluated and directed changes based on real testing results.
