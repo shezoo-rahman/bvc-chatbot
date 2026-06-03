@@ -1,8 +1,10 @@
+import json
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 
+from app.models.schemas import CompanyNews, CompanyProfile, StockQuote, SymbolSearchResult
 from app.services.stock_data import (
     RateLimitError,
     StockDataService,
@@ -183,3 +185,64 @@ async def test_symbol_uppercased(service):
     )
     quote = await service.get_quote("aapl")
     assert quote.symbol == "AAPL"
+
+
+def test_format_quote():
+    quote = StockQuote(
+        symbol="AAPL",
+        current_price=178.5,
+        change=2.3,
+        percent_change=1.31,
+        high=179.2,
+        low=176.1,
+        open=176.8,
+        previous_close=176.2,
+    )
+    result = json.loads(StockDataService.format_quote(quote))
+    assert result["symbol"] == "AAPL"
+    assert result["current_price"] == 178.5
+
+
+def test_format_profile():
+    profile = CompanyProfile(
+        symbol="AAPL",
+        name="Apple Inc",
+        industry="Technology",
+        market_cap=2800000,
+        country="US",
+        currency="USD",
+        exchange="NASDAQ",
+        ipo_date="1980-12-12",
+        logo="https://example.com/logo.png",
+        web_url="https://apple.com",
+    )
+    result = json.loads(StockDataService.format_profile(profile))
+    assert result["name"] == "Apple Inc"
+    assert result["market_cap"] == 2800000
+
+
+def test_format_news():
+    news = [
+        CompanyNews(
+            headline="Test",
+            summary="Summary",
+            source="Reuters",
+            url="https://example.com",
+            datetime=1700000000,
+        )
+    ]
+    result = json.loads(StockDataService.format_news(news))
+    assert len(result) == 1
+    assert result[0]["headline"] == "Test"
+
+
+def test_format_search_results():
+    results = [SymbolSearchResult(symbol="AAPL", description="Apple Inc")]
+    result = json.loads(StockDataService.format_search_results(results))
+    assert len(result) == 1
+    assert result[0]["symbol"] == "AAPL"
+
+
+def test_format_search_results_empty():
+    result = json.loads(StockDataService.format_search_results([]))
+    assert result["message"] == "No matching symbols found."
