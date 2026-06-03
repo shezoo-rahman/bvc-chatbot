@@ -107,14 +107,9 @@ deactivate  # exit the virtual environment
 
 ## AI Tools Used
 
-This project was built with **Claude Code** (Anthropic's CLI agent). Here's how it helped:
+I built this project using **Claude Code** (Anthropic's CLI agent) as a pair-programming assistant to accelerate development:
 
-- **Architecture & scaffolding** — Set up the FastAPI project structure, Docker config, and CI pipeline
-- **Implementation** — Wrote the core service layer (stock data, AI assistant, validation), tests, and frontend
-- **Prompt engineering** — Iterated on the system prompt across multiple rounds of testing to handle edge cases (disambiguation, off-topic rejection, international stocks, hallucination prevention)
-- **Debugging** — Diagnosed issues like Finnhub's 403 responses for non-US stocks, international ticker filtering (`.TO`, `.F` suffixes vs `.A`, `.B` share classes), and conversation history loss causing search loops
-- **Code review** — Caught the Dockerfile build order issue (package install before source copy) and `crypto.randomUUID` browser compatibility problem
-
-Several AI suggestions were rejected or simplified — for example, Claude proposed a decorator-based tool registry with auto-discovery for dispatching function calls, but I kept a plain if/elif in `_dispatch_tool` since there are only 4 tools and a registry adds complexity without benefit at this scale. Similarly, I chose in-memory session storage over a suggested Redis integration to avoid adding infrastructure for a demo app.
-
-All code was reviewed, tested, and refined through an iterative process — Claude proposed, I evaluated and directed changes based on real testing results.
+- **Architecture** — I designed the service layer structure and chose FastAPI, OpenAI function calling, and Finnhub; Claude helped scaffold boilerplate and wire up Docker/CI
+- **Prompt engineering** — I tested extensively against edge cases (disambiguation, international stocks, off-topic queries, hallucination) and refined the system prompt across multiple rounds based on real outputs
+- **Debugging** — I identified issues like Finnhub 403s on non-US stocks, ticker filtering bugs (`.TO`, `.F` suffixes vs `.A`, `.B` share classes), and conversation history loss; Claude helped trace root causes and implement fixes
+- **Code quality** — I rejected several over-engineered suggestions: a decorator-based tool registry (unnecessary for 4 tools), Redis for session storage (overkill for a demo), and excessive abstraction layers. I kept the codebase simple and appropriately scoped for the task
