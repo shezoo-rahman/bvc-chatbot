@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     http_client = httpx.AsyncClient(timeout=30.0)
     stock_service = StockDataService(api_key=settings.finnhub_api_key, http_client=http_client)
-    openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
+    openai_client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=60.0)
     assistant = AIAssistant(
         openai_client=openai_client,
         stock_service=stock_service,
