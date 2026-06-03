@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -31,6 +32,9 @@ class AIAssistant:
         self._sessions: dict[str, list[dict[str, str]]] = {}
 
     async def answer_query(self, question: str, session_id: str = "") -> str:
+        logger.info("Query received: %s (session=%s)", question[:80], session_id[:8] or "none")
+        start = time.perf_counter()
+
         history: list[dict[str, str]] = self._sessions.get(session_id, []) if session_id else []
 
         messages: list[dict[str, Any]] = [
@@ -40,7 +44,7 @@ class AIAssistant:
         ]
         tool_results: list[str] = []
 
-        for _ in range(MAX_ITERATIONS):
+        for iteration in range(MAX_ITERATIONS):
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -51,11 +55,17 @@ class AIAssistant:
 
             if not message.tool_calls:
                 final_text: str = message.content or "I wasn't able to generate a response."
-                validated_text, _ = validate_response(final_text, tool_results)
+                validated_text, was_valid = validate_response(final_text, tool_results)
+                if not was_valid:
+                    logger.warning("Validation flagged ungrounded numbers in response")
+                elapsed_ms = (time.perf_counter() - start) * 1000
+                logger.info("Query completed in %.0fms (%d iterations)", elapsed_ms, iteration + 1)
                 self._save_turn(session_id, question, validated_text)
                 return validated_text
 
             messages.append(message)
+            tool_names: list[str] = [tc.function.name for tc in message.tool_calls]
+            logger.info("Tool calls requested: %s", ", ".join(tool_names))
 
             tasks: list[asyncio.Task[str]] = [
                 self._execute_tool(tool_call) for tool_call in message.tool_calls
@@ -73,6 +83,7 @@ class AIAssistant:
                     }
                 )
 
+        logger.warning("Max iterations reached for query: %s", question[:80])
         fallback: str = (
             "I gathered some data but couldn't complete the analysis. "
             "Please try a simpler question."
@@ -93,8 +104,10 @@ class AIAssistant:
         try:
             args: dict[str, Any] = json.loads(tool_call.function.arguments)
         except json.JSONDecodeError:
+            logger.warning("Invalid JSON arguments for tool %s", name)
             return json.dumps({"error": "Invalid tool arguments"})
 
+        start: float = time.perf_counter()
         try:
             if name == "search_symbol":
                 results = await self.stock_service.search_symbol(args["query"])
@@ -111,11 +124,17 @@ class AIAssistant:
             else:
                 return json.dumps({"error": f"Unknown tool: {name}"})
         except SymbolNotFoundError as e:
+            logger.info("Symbol not found: %s", e)
             return json.dumps({"error": str(e)})
         except RateLimitError as e:
+            logger.warning("Rate limit hit: %s", e)
             return json.dumps({"error": str(e)})
         except StockDataError as e:
+            logger.error("Stock data error in %s: %s", name, e)
             return json.dumps({"error": f"Failed to fetch data: {e}"})
         except Exception as e:
             logger.exception("Unexpected error executing tool %s", name)
             return json.dumps({"error": f"An unexpected error occurred: {e}"})
+        finally:
+            elapsed_ms: float = (time.perf_counter() - start) * 1000
+            logger.info("Tool %s(%s) completed in %.0fms", name, args, elapsed_ms)

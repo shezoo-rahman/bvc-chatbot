@@ -1,11 +1,12 @@
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 
@@ -14,6 +15,11 @@ from app.config import settings
 from app.services.ai_assistant import AIAssistant
 from app.services.stock_data import StockDataService
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -41,6 +47,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Stock Insights Assistant", lifespan=lifespan)
 app.include_router(router)
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next) -> Response:
+    start: float = time.perf_counter()
+    response: Response = await call_next(request)
+    elapsed_ms: float = (time.perf_counter() - start) * 1000
+    if request.url.path.startswith("/api"):
+        logger.info(
+            "%s %s %d %.0fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+    return response
+
 
 static_dir: Path = Path(__file__).parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
